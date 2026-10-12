@@ -1,0 +1,85 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gym Log"><meta name="theme-color" content="#0d1117">
+<link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json"><title>Gym Log</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0d1117;color:#e6edf3;font:16px -apple-system,system-ui,sans-serif;padding:env(safe-area-inset-top) 10px 90px}
+h1{font-size:20px;margin:12px 4px}.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:12px;margin:10px 0}
+.tabs{display:flex;gap:6px;position:sticky;top:0;background:#0d1117;padding:8px 0;z-index:5}
+.tabs button{flex:1;min-height:48px;border-radius:12px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:15px;font-weight:600}
+.tabs button.on{background:#238636;border-color:#2ea043}.tabs button.off{opacity:.55;font-weight:400}
+input,select,textarea{background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:10px;font-size:17px;min-height:46px;padding:6px 8px;width:100%}
+textarea{min-height:80px}label{font-size:13px;color:#8b949e;display:block;margin:6px 0 2px}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}
+.set{display:grid;grid-template-columns:34px 48px 1fr 1fr;gap:8px;align-items:center;margin:6px 0}
+.set input[type=checkbox]{width:44px;height:44px;min-height:44px;accent-color:#2ea043}
+.exh{display:flex;justify-content:space-between;align-items:baseline}.exn{font-weight:700;font-size:17px}.tgt{color:#8b949e;font-size:14px}
+.up{background:#1f6feb33;color:#79c0ff;border:1px solid #1f6feb;border-radius:8px;padding:4px 8px;font-size:13px;margin-top:6px;display:inline-block}
+.hint{color:#8b949e;font-size:12px}.done{border-color:#2ea043}
+.bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:#0d1117ee;border-top:1px solid #30363d}
+.bar button{flex:1;min-height:50px;border-radius:12px;border:0;background:#30363d;color:#fff;font-size:14px;font-weight:600}.bar .pri{background:#238636}
+.big{font-size:22px;text-align:center;padding:30px 10px;color:#8b949e}#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#238636;padding:10px 16px;border-radius:10px;display:none;z-index:9}
+</style></head><body>
+<h1>Gym Log</h1>
+<div class="card"><div class="row"><div><label>Week of (Monday)</label><input type="date" id="wk"></div>
+<div><label>Boxing sessions</label><input type="number" inputmode="numeric" min="0" max="7" id="box"></div>
+<div><label>Recovery 1-10</label><input type="number" inputmode="numeric" min="1" max="10" id="rec"></div></div>
+<label>Notes (PRs, soreness, boxing)</label><textarea id="notes"></textarea></div>
+<div class="tabs" id="tabs"></div><div id="main"></div>
+<div class="bar"><button class="pri" onclick="copyRep()">Copy weekly report</button><button onclick="exp()">Export</button><button onclick="document.getElementById('imp').click()">Import</button></div>
+<input type="file" id="imp" accept="application/json,.json" style="display:none"><div id="toast"></div>
+<script>
+const PROG=[{"day":"Mon","focus":"Shoulder Width & Lats","ex":[{"n":"Squat / Leg Press","s":3,"t":"6-10","o":["Squat","Leg Press"],"u":"reps"},{"n":"Flat Chest Press","s":3,"t":"6-10","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Wide-Grip Lat Pulldown","s":3,"t":"8-12","o":[],"u":"reps"},{"n":"Leaning Cable Lateral Raise","s":3,"t":"12-15","o":[],"u":"reps"},{"n":"Leg Extension","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Incline Dumbbell Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Rope Triceps Pushdown","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Plank","s":2,"t":"30-45 seconds","o":[],"u":"seconds"}]},{"day":"Wed","focus":"Back Thickness & Posterior Chain","ex":[{"n":"Romanian Deadlift","s":3,"t":"6-10","o":[],"u":"reps"},{"n":"Incline Chest Press","s":3,"t":"8-12","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Dumbbell Meadows Row","s":3,"t":"8-12","o":[],"u":"reps"},{"n":"Dumbbell Kelso Shrug","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Lean-Away Dumbbell Lateral Raise","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hammer Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Overhead Cable Triceps Extension","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Calf Raises","s":2,"t":"12-20","o":[],"u":"reps"}]},{"day":"Fri","focus":"X-Frame Aesthetics","ex":[{"n":"Bulgarian Split Squat","s":3,"t":"8-10","o":[],"u":"reps"},{"n":"Chest Press","s":3,"t":"8-12","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Wide-Grip Lat Pulldown","s":3,"t":"10-12","o":[],"u":"reps"},{"n":"Leaning Cable Lateral Raise","s":3,"t":"12-20","o":[],"u":"reps"},{"n":"Leg Extension","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hamstring Curl","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Preacher Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Rope Triceps Pushdown","s":2,"t":"10-15","o":[],"u":"reps"}]},{"day":"Sat","focus":"Athletic Balance & Detail","ex":[{"n":"Goblet Squat","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Chest Press / Push-ups","s":2,"t":"10-15","o":["Machine","Push-ups"],"u":"reps"},{"n":"Dumbbell Cobra Row","s":3,"t":"10-12","o":[],"u":"reps"},{"n":"Chest-Supported Y-Raise","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hamstring Curl","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Pallof Press","s":2,"t":"10-12/side","o":[],"u":"reps"},{"n":"Cable Curl","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Single-Arm Cable Triceps Extension","s":2,"t":"12-15","o":[],"u":"reps"}]}];const KEY="gymlog.v1";
+let DB=JSON.parse(localStorage.getItem(KEY)||'{"weeks":{}}');
+const $=id=>document.getElementById(id);
+function monday(d){d=new Date(d);const k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return d.toLocaleDateString("en-CA")}
+let wk=monday(new Date());const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+let cur=DAYS[(new Date().getDay()+6)%7];
+function W(){return DB.weeks[wk]||(DB.weeks[wk]={box:"",rec:"",notes:"",days:{}})}
+function save(){localStorage.setItem(KEY,JSON.stringify(DB))}
+const isPush=v=>v==="Push-ups";
+function key(e,v){return e.n+"|"+(v||"")}
+function topR(t){const m=String(t).match(/(\d+)\D*$/)||String(t).match(/-(\d+)/);const a=String(t).match(/\d+-(\d+)/);return a?+a[1]:(m?+m[1]:0)}
+function entry(w,day,i){const d=(DB.weeks[w]||{}).days||{};return (d[day]||{})[i]}
+function last(day,i,e,v){const ws=Object.keys(DB.weeks).filter(x=>x<wk).sort().reverse();
+ for(const w of ws){const en=entry(w,day,i);if(en&&(en.v||"")===(v||"")&&en.sets.some(s=>s.r!==""&&s.r!=null))return en}
+ for(const w of ws){const dd=DB.weeks[w].days||{};for(const d in dd)for(const j in dd[d]){const p=PROG.find(x=>x.day===d);const en=dd[d][j];if(p&&p.ex[j]&&p.ex[j].n===e.n&&(en.v||"")===(v||"")&&en.sets.some(s=>s.r))return en}}return null}
+function lastV(day,i,e){if(!e.o.length)return"";const ws=Object.keys(DB.weeks).filter(x=>x<wk).sort().reverse();for(const w of ws){const en=entry(w,day,i);if(en&&en.v)return en.v}return e.o[0]}
+function unitLbl(e,v){if(isPush(v))return"+lbs (blank=BW)";if(v==="Dumbbells"||/Dumbbell/.test(e.n))return"lbs / hand";if(v==="Machine")return"lbs (as shown)";return"lbs"}
+function tabs(){$("tabs").innerHTML=DAYS.map(d=>{const t=PROG.some(p=>p.day===d);return`<button class="${d===cur?"on":""} ${t?"":"off"}" onclick="cur='${d}';render()">${d}</button>`}).join("")}
+function render(){tabs();const w=W();$("wk").value=wk;$("box").value=w.box;$("rec").value=w.rec;$("notes").value=w.notes;
+ const p=PROG.find(x=>x.day===cur);
+ if(!p){$("main").innerHTML=`<div class="card big">${cur==="Sun"?"Rest day 😴":"Boxing day 🥊<br><br><button style='min-height:50px;padding:0 20px;border-radius:12px;border:0;background:#238636;color:#fff;font-size:16px' onclick='bump()'>+1 boxing session</button>"}</div>`;return}
+ w.days[cur]=w.days[cur]||{};let h=`<div class="hint" style="margin:4px">${p.focus}</div>`;
+ p.ex.forEach((e,i)=>{const en=w.days[cur][i]||(w.days[cur][i]={v:lastV(cur,i,e),sets:Array.from({length:e.s},()=>({d:false,w:"",r:""}))});
+  const L=last(cur,i,e,en.v),sec=e.u==="seconds",tp=topR(e.t);
+  const up=L&&L.sets.length&&L.sets.every(s=>+s.r>=tp);
+  h+=`<div class="card ${en.sets.every(s=>s.d)?"done":""}"><div class="exh"><span class="exn">${e.n}</span><span class="tgt">${e.s} × ${e.t}</span></div>`;
+  if(e.o.length)h+=`<select onchange="setV(${i},this.value)">${e.o.map(o=>`<option ${o===en.v?"selected":""}>${o}</option>`).join("")}</select>`;
+  if(up)h+=`<div class="up">⬆ Go up: hit ${tp}${sec?"s":""} on every set last time</div>`;
+  h+=`<div class="set hint"><span>#</span><span>Done</span><span>${sec?"(bodyweight)":unitLbl(e,en.v)}</span><span>${sec?"seconds":"reps"}</span></div>`;
+  en.sets.forEach((s,k)=>{const ls=L&&L.sets[k]||{};h+=`<div class="set"><b>${k+1}</b><input type="checkbox" ${s.d?"checked":""} onchange="setS(${i},${k},'d',this.checked)">
+  <input inputmode="decimal" ${sec?"disabled":""} placeholder="${ls.w||""}" value="${s.w}" oninput="setS(${i},${k},'w',this.value)">
+  <input inputmode="numeric" placeholder="${ls.r||""}" value="${s.r}" oninput="setS(${i},${k},'r',this.value)"></div>`});
+  if(L)h+=`<div class="hint">Last: ${L.sets.map(s=>fmt(s,e,L.v)).join(", ")}</div>`;h+=`</div>`});
+ $("main").innerHTML=h;save()}
+function fmt(s,e,v){if(e.u==="seconds")return(s.r||"–")+"s";const wt=s.w===""?(isPush(v)?"BW":"–"):s.w;return wt+"×"+(s.r||"–")}
+function setV(i,v){W().days[cur][i].v=v;save();render()}
+function setS(i,k,f,v){W().days[cur][i].sets[k][f]=v;save();if(f==="d")render()}
+function bump(){const w=W();w.box=(+w.box||0)+1;save();render();toast("Boxing: "+w.box)}
+$("wk").onchange=e=>{if(e.target.value){wk=monday(e.target.value+"T12:00");render()}};
+["box","rec","notes"].forEach(id=>$(id).oninput=e=>{W()[id]=e.target.value;save()});
+function report(){const w=W();let t=`WEEKLY LOG — Week of ${wk}\nBoxing sessions: ${w.box||0}\nRecovery rating: ${w.rec||"-"}/10\n`;
+ PROG.forEach(p=>{t+=`\n${p.day} — ${p.focus}\n`;p.ex.forEach((e,i)=>{const en=(w.days[p.day]||{})[i];
+  const v=en&&en.v?` [${en.v}${en.v==="Dumbbells"?", lbs per hand":en.v==="Machine"?", as displayed":""}]`:(/Dumbbell/.test(e.n)?" [lbs per hand]":"");
+  const ss=en?en.sets.map((s,k)=>`S${k+1} ${fmt(s,e,en.v)}${s.d?" ✓":""}`).join(" | "):"not logged";t+=`- ${e.n}${v} (${e.s}×${e.t}): ${ss}\n`})});
+ return t+`\nNotes: ${w.notes||"-"}\n`}
+function toast(m){$("toast").textContent=m;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",1800)}
+async function copyRep(){const t=report();try{await navigator.clipboard.writeText(t);toast("Report copied")}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();toast("Report copied")}}
+function exp(){const b=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="gym-log-"+wk+".json";a.click()}
+$("imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d.weeks)throw 0;if(!confirm("Merge backup into this phone's log?"))return;Object.assign(DB.weeks,d.weeks);save();render();toast("Imported")}catch(x){alert("Not a Gym Log backup")}};
+render();
+</script></body></html>
