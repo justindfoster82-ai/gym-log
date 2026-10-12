@@ -80,6 +80,12 @@ function report(){const w=W();let t=`WEEKLY LOG — Week of ${wk}\nBoxing sessio
 function toast(m){$("toast").textContent=m;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",1800)}
 async function copyRep(){const t=report();try{await navigator.clipboard.writeText(t);toast("Report copied")}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();toast("Report copied")}}
 function exp(){const b=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="gym-log-"+wk+".json";a.click()}
-$("imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d.weeks)throw 0;if(!confirm("Merge backup into this phone's log?"))return;Object.assign(DB.weeks,d.weeks);save();render();toast("Imported")}catch(x){alert("Not a Gym Log backup")}};
-render();
+$("imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d.weeks)throw 0;if(!confirm("Merge backup into this phone's log?"))return;merge(d);render();toast("Imported")}catch(x){alert("Not a Gym Log backup")}};
+function merge(d){if(!d||!d.weeks)throw 0;for(const w in d.weeks){const t=DB.weeks[w]||(DB.weeks[w]={box:"",rec:"",notes:"",days:{}});const s=d.weeks[w];
+ if(s.box!==""&&s.box!=null)t.box=s.box;if(s.rec!==""&&s.rec!=null)t.rec=s.rec;if(s.notes)t.notes=t.notes&&!t.notes.includes(s.notes)?t.notes+"\n"+s.notes:s.notes;
+ for(const dy in s.days||{}){t.days[dy]=t.days[dy]||{};Object.assign(t.days[dy],s.days[dy])}}save()}
+async function linkImport(){const q=new URLSearchParams(location.search).get("import");if(!q)return;history.replaceState(null,"",location.pathname);
+ if(!/^[\w.-]+\.json$/.test(q)){alert("Bad import link");return}
+ try{const d=await (await fetch("import/"+q,{cache:"no-store"})).json();if(!confirm("Load workout data from "+q+" into this phone's log?"))return;merge(d);render();toast("Imported "+q)}catch(e){alert("Import failed")}}
+render();linkImport();
 </script></body></html>
