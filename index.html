@@ -9,7 +9,7 @@
 *{box-sizing:border-box}body{margin:0;background:#0d1117;color:#e6edf3;font:16px -apple-system,system-ui,sans-serif;padding:env(safe-area-inset-top) 10px 90px}
 h1{font-size:20px;margin:12px 4px}.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:12px;margin:10px 0}
 .tabs{display:flex;gap:6px;position:sticky;top:0;background:#0d1117;padding:8px 0;z-index:5}
-.tabs button{flex:1;min-height:48px;border-radius:12px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:15px;font-weight:600}
+.tabs{overflow-x:auto}.tabs button{flex:1 0 auto;padding:0 10px;min-height:48px;border-radius:12px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:15px;font-weight:600}
 .tabs button.on{background:#238636;border-color:#2ea043}.tabs button.off{opacity:.55;font-weight:400}
 input,select,textarea{background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:10px;font-size:17px;min-height:46px;padding:6px 8px;width:100%}
 textarea{min-height:80px}label{font-size:13px;color:#8b949e;display:block;margin:6px 0 2px}
@@ -24,39 +24,48 @@ textarea{min-height:80px}label{font-size:13px;color:#8b949e;display:block;margin
 .big{font-size:22px;text-align:center;padding:30px 10px;color:#8b949e}#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#238636;padding:10px 16px;border-radius:10px;display:none;z-index:9}
 </style></head><body>
 <h1>Gym Log</h1>
-<div class="card"><div class="row"><div><label>Week of (Monday)</label><input type="date" id="wk"></div>
-<div><label>Boxing sessions</label><input type="number" inputmode="numeric" min="0" max="7" id="box"></div>
-<div><label>Recovery 1-10</label><input type="number" inputmode="numeric" min="1" max="10" id="rec"></div></div>
+<div class="tabs" id="tabs"></div>
+<div class="card"><div class="row"><div><label id="dlbl">Session date</label><input type="date" id="sd"></div></div><div class="hint" id="focus" style="margin-top:6px"></div></div>
+<div id="main"></div>
+<div class="card"><b>Week</b><div class="row"><div><label>Week starting</label><input type="date" id="wk"></div>
+<div><label>Boxing (count)</label><input id="box" disabled></div><div><label>Recovery 1-10</label><input type="number" inputmode="numeric" min="1" max="10" id="rec"></div></div>
 <label>Notes (PRs, soreness, boxing)</label><textarea id="notes"></textarea></div>
-<div class="tabs" id="tabs"></div><div id="main"></div>
+<div class="card"><b>History</b><div id="hist"></div></div>
 <div class="bar"><button class="pri" onclick="copyRep()">Copy weekly report</button><button onclick="exp()">Export</button><button onclick="document.getElementById('imp').click()">Import</button></div>
 <input type="file" id="imp" accept="application/json,.json" style="display:none"><div id="toast"></div>
 <script>
-const PROG=[{"day":"Mon","focus":"Shoulder Width & Lats","ex":[{"n":"Squat / Leg Press","s":3,"t":"6-10","o":["Squat","Leg Press"],"u":"reps"},{"n":"Flat Chest Press","s":3,"t":"6-10","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Wide-Grip Lat Pulldown","s":3,"t":"8-12","o":[],"u":"reps"},{"n":"Leaning Cable Lateral Raise","s":3,"t":"12-15","o":[],"u":"reps"},{"n":"Leg Extension","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Incline Dumbbell Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Rope Triceps Pushdown","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Plank","s":2,"t":"30-45 seconds","o":[],"u":"seconds"}]},{"day":"Wed","focus":"Back Thickness & Posterior Chain","ex":[{"n":"Romanian Deadlift","s":3,"t":"6-10","o":[],"u":"reps"},{"n":"Incline Chest Press","s":3,"t":"8-12","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Dumbbell Meadows Row","s":3,"t":"8-12","o":[],"u":"reps"},{"n":"Dumbbell Kelso Shrug","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Lean-Away Dumbbell Lateral Raise","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hammer Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Overhead Cable Triceps Extension","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Calf Raises","s":2,"t":"12-20","o":[],"u":"reps"}]},{"day":"Fri","focus":"X-Frame Aesthetics","ex":[{"n":"Bulgarian Split Squat","s":3,"t":"8-10","o":[],"u":"reps"},{"n":"Chest Press","s":3,"t":"8-12","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Wide-Grip Lat Pulldown","s":3,"t":"10-12","o":[],"u":"reps"},{"n":"Leaning Cable Lateral Raise","s":3,"t":"12-20","o":[],"u":"reps"},{"n":"Leg Extension","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hamstring Curl","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Preacher Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Rope Triceps Pushdown","s":2,"t":"10-15","o":[],"u":"reps"}]},{"day":"Sat","focus":"Athletic Balance & Detail","ex":[{"n":"Goblet Squat","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Chest Press / Push-ups","s":2,"t":"10-15","o":["Machine","Push-ups"],"u":"reps"},{"n":"Dumbbell Cobra Row","s":3,"t":"10-12","o":[],"u":"reps"},{"n":"Chest-Supported Y-Raise","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hamstring Curl","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Pallof Press","s":2,"t":"10-12/side","o":[],"u":"reps"},{"n":"Cable Curl","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Single-Arm Cable Triceps Extension","s":2,"t":"12-15","o":[],"u":"reps"}]}];const KEY="gymlog.v1";
-let DB=JSON.parse(localStorage.getItem(KEY)||'{"weeks":{}}');
-const $=id=>document.getElementById(id);
-function monday(d){d=new Date(d);const k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return d.toLocaleDateString("en-CA")}
-let wk=monday(new Date());const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-let cur=DAYS[(new Date().getDay()+6)%7];
-function W(){return DB.weeks[wk]||(DB.weeks[wk]={box:"",rec:"",notes:"",days:{}})}
-function save(){localStorage.setItem(KEY,JSON.stringify(DB))}
+const PROG=[{"day":"Mon","focus":"Shoulder Width & Lats","ex":[{"n":"Squat / Leg Press","s":3,"t":"6-10","o":["Squat","Leg Press"],"u":"reps"},{"n":"Flat Chest Press","s":3,"t":"6-10","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Wide-Grip Lat Pulldown","s":3,"t":"8-12","o":[],"u":"reps"},{"n":"Leaning Cable Lateral Raise","s":3,"t":"12-15","o":[],"u":"reps"},{"n":"Leg Extension","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Incline Dumbbell Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Rope Triceps Pushdown","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Plank","s":2,"t":"30-45 seconds","o":[],"u":"seconds"}]},{"day":"Wed","focus":"Back Thickness & Posterior Chain","ex":[{"n":"Romanian Deadlift","s":3,"t":"6-10","o":[],"u":"reps"},{"n":"Incline Chest Press","s":3,"t":"8-12","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Dumbbell Meadows Row","s":3,"t":"8-12","o":[],"u":"reps"},{"n":"Dumbbell Kelso Shrug","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Lean-Away Dumbbell Lateral Raise","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hammer Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Overhead Cable Triceps Extension","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Calf Raises","s":2,"t":"12-20","o":[],"u":"reps"}]},{"day":"Fri","focus":"X-Frame Aesthetics","ex":[{"n":"Bulgarian Split Squat","s":3,"t":"8-10","o":[],"u":"reps"},{"n":"Chest Press","s":3,"t":"8-12","o":["Machine","Dumbbells"],"u":"reps"},{"n":"Wide-Grip Lat Pulldown","s":3,"t":"10-12","o":[],"u":"reps"},{"n":"Leaning Cable Lateral Raise","s":3,"t":"12-20","o":[],"u":"reps"},{"n":"Leg Extension","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hamstring Curl","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Preacher Curl","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Rope Triceps Pushdown","s":2,"t":"10-15","o":[],"u":"reps"}]},{"day":"Sat","focus":"Athletic Balance & Detail","ex":[{"n":"Goblet Squat","s":2,"t":"10-12","o":[],"u":"reps"},{"n":"Chest Press / Push-ups","s":2,"t":"10-15","o":["Machine","Push-ups"],"u":"reps"},{"n":"Dumbbell Cobra Row","s":3,"t":"10-12","o":[],"u":"reps"},{"n":"Chest-Supported Y-Raise","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Hamstring Curl","s":2,"t":"10-15","o":[],"u":"reps"},{"n":"Pallof Press","s":2,"t":"10-12/side","o":[],"u":"reps"},{"n":"Cable Curl","s":2,"t":"12-15","o":[],"u":"reps"},{"n":"Single-Arm Cable Triceps Extension","s":2,"t":"12-15","o":[],"u":"reps"}]}];const KEY="gymlog.v2";const WK=["A","B","C","D"];PROG.forEach((p,i)=>p.id=WK[i]);
+const $=id=>document.getElementById(id);const ld=d=>d.toLocaleDateString("en-CA");const today=ld(new Date());
+const dt=s=>new Date(s+"T12:00");const nice=s=>dt(s).toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric"});
+function monday(s){const d=dt(s);d.setDate(d.getDate()-(d.getDay()+6)%7);return ld(d)}
+function addD(s,n){const d=dt(s);d.setDate(d.getDate()+n);return ld(d)}
+function fromV1(o){const n={v:2,sessions:{},weeks:{}};const off={Mon:0,Wed:2,Fri:4,Sat:5},m={Mon:"A",Wed:"B",Fri:"C",Sat:"D"};
+ for(const w in o.weeks||{}){const x=o.weeks[w];n.weeks[w]={rec:x.rec||"",notes:x.notes||""};for(const d in x.days||{})if(m[d]){const date=addD(w,off[d]);n.sessions[m[d]+"_"+date]={w:m[d],date,ex:x.days[d]}}}return n}
+let DB=JSON.parse(localStorage.getItem(KEY)||"null")||(localStorage.getItem("gymlog.v1")?fromV1(JSON.parse(localStorage.getItem("gymlog.v1"))):{v:2,sessions:{},weeks:{}});
 const isPush=v=>v==="Push-ups";
-function key(e,v){return e.n+"|"+(v||"")}
-function topR(t){const m=String(t).match(/(\d+)\D*$/)||String(t).match(/-(\d+)/);const a=String(t).match(/\d+-(\d+)/);return a?+a[1]:(m?+m[1]:0)}
-function entry(w,day,i){const d=(DB.weeks[w]||{}).days||{};return (d[day]||{})[i]}
-function last(day,i,e,v){const ws=Object.keys(DB.weeks).filter(x=>x<wk).sort().reverse();
- for(const w of ws){const en=entry(w,day,i);if(en&&(en.v||"")===(v||"")&&en.sets.some(s=>s.r!==""&&s.r!=null))return en}
- for(const w of ws){const dd=DB.weeks[w].days||{};for(const d in dd)for(const j in dd[d]){const p=PROG.find(x=>x.day===d);const en=dd[d][j];if(p&&p.ex[j]&&p.ex[j].n===e.n&&(en.v||"")===(v||"")&&en.sets.some(s=>s.r))return en}}return null}
-function lastV(day,i,e){if(!e.o.length)return"";const ws=Object.keys(DB.weeks).filter(x=>x<wk).sort().reverse();for(const w of ws){const en=entry(w,day,i);if(en&&en.v)return en.v}return e.o[0]}
+function save(){localStorage.setItem(KEY,JSON.stringify(DB))}
+const S=()=>Object.values(DB.sessions);
+function lift(){return S().filter(s=>s.w!=="Box").sort((a,b)=>a.date<b.date?-1:1)}
+function nextW(){const t=lift().filter(s=>s.date===today).pop();if(t)return t.w;const l=lift().pop();return l?WK[(WK.indexOf(l.w)+1)%4]:"A"}
+let cur=nextW(),date=today,wk=monday(today);
+function topR(t){const a=String(t).match(/\d+-(\d+)/);return a?+a[1]:+(String(t).match(/\d+/)||[0])[0]}
+function hasData(en){return en&&en.sets.some(s=>s.r!==""&&s.r!=null)}
+function last(e,i,v){const ss=lift().filter(s=>s.date<date).reverse();
+ for(const s of ss)if(s.w===cur){const en=s.ex[i];if(hasData(en)&&(en.v||"")===(v||""))return{...en,date:s.date}}
+ for(const s of ss){const p=PROG.find(x=>x.id===s.w);for(const j in s.ex){const en=s.ex[j];if(p.ex[j]&&p.ex[j].n===e.n&&hasData(en)&&(en.v||"")===(v||""))return{...en,date:s.date}}}return null}
+function lastV(e,i){if(!e.o.length)return"";for(const s of lift().filter(s=>s.date<date&&s.w===cur).reverse())if(s.ex[i]&&s.ex[i].v)return s.ex[i].v;return e.o[0]}
 function unitLbl(e,v){if(isPush(v))return"+lbs (blank=BW)";if(v==="Dumbbells"||/Dumbbell/.test(e.n))return"lbs / hand";if(v==="Machine")return"lbs (as shown)";return"lbs"}
-function tabs(){$("tabs").innerHTML=DAYS.map(d=>{const t=PROG.some(p=>p.day===d);return`<button class="${d===cur?"on":""} ${t?"":"off"}" onclick="cur='${d}';render()">${d}</button>`}).join("")}
-function render(){tabs();const w=W();$("wk").value=wk;$("box").value=w.box;$("rec").value=w.rec;$("notes").value=w.notes;
- const p=PROG.find(x=>x.day===cur);
- if(!p){$("main").innerHTML=`<div class="card big">${cur==="Sun"?"Rest day 😴":"Boxing day 🥊<br><br><button style='min-height:50px;padding:0 20px;border-radius:12px;border:0;background:#238636;color:#fff;font-size:16px' onclick='bump()'>+1 boxing session</button>"}</div>`;return}
- w.days[cur]=w.days[cur]||{};let h=`<div class="hint" style="margin:4px">${p.focus}</div>`;
- p.ex.forEach((e,i)=>{const en=w.days[cur][i]||(w.days[cur][i]={v:lastV(cur,i,e),sets:Array.from({length:e.s},()=>({d:false,w:"",r:""}))});
-  const L=last(cur,i,e,en.v),sec=e.u==="seconds",tp=topR(e.t);
-  const up=L&&L.sets.length&&L.sets.every(s=>+s.r>=tp);
+function sess(){const id=cur+"_"+date;return DB.sessions[id]||(DB.sessions[id]={w:cur,date,ex:{}})}
+function tabs(){$("tabs").innerHTML=[...WK,"Box"].map(w=>`<button class="${w===cur?"on":""}" onclick="cur='${w}';render()">${w==="Box"?"🥊 Box":"Workout "+w}</button>`).join("")}
+function W(){return DB.weeks[wk]||(DB.weeks[wk]={rec:"",notes:""})}
+function render(){tabs();$("sd").value=date;$("wk").value=wk;const w=W();$("rec").value=w.rec;$("notes").value=w.notes;
+ $("box").value=S().filter(s=>s.w==="Box"&&s.date>=wk&&s.date<addD(wk,7)).length;
+ if(cur==="Box"){$("dlbl").textContent="Boxing date";$("focus").textContent="";const bx=S().filter(s=>s.w==="Box").sort((a,b)=>a.date<b.date?1:-1);
+  $("main").innerHTML=`<div class="card"><button class="up" style="font-size:17px;padding:12px;width:100%" onclick="logBox()">Log boxing on ${nice(date)}</button>${bx.map(s=>`<div class="row" style="margin-top:8px"><span>🥊 ${nice(s.date)}</span><button class="up" style="flex:0" onclick="delS('Box_${s.date}')">Remove</button></div>`).join("")}</div>`;hist();return}
+ $("dlbl").textContent="Session date";const p=PROG.find(x=>x.id===cur);$("focus").textContent=p.focus;
+ const ss=DB.sessions[cur+"_"+date];let h="";
+ p.ex.forEach((e,i)=>{const en=(ss&&ss.ex[i])||{v:lastV(e,i),sets:Array.from({length:e.s},()=>({d:false,w:"",r:""}))};
+  const L=last(e,i,en.v),sec=e.u==="seconds",tp=topR(e.t);const up=L&&L.sets.every(s=>+s.r>=tp);
   h+=`<div class="card ${en.sets.every(s=>s.d)?"done":""}"><div class="exh"><span class="exn">${e.n}</span><span class="tgt">${e.s} × ${e.t}</span></div>`;
   if(e.o.length)h+=`<select onchange="setV(${i},this.value)">${e.o.map(o=>`<option ${o===en.v?"selected":""}>${o}</option>`).join("")}</select>`;
   if(up)h+=`<div class="up">⬆ Go up: hit ${tp}${sec?"s":""} on every set last time</div>`;
@@ -64,28 +73,35 @@ function render(){tabs();const w=W();$("wk").value=wk;$("box").value=w.box;$("re
   en.sets.forEach((s,k)=>{const ls=L&&L.sets[k]||{};h+=`<div class="set"><b>${k+1}</b><input type="checkbox" ${s.d?"checked":""} onchange="setS(${i},${k},'d',this.checked)">
   <input inputmode="decimal" ${sec?"disabled":""} placeholder="${ls.w||""}" value="${s.w}" oninput="setS(${i},${k},'w',this.value)">
   <input inputmode="numeric" placeholder="${ls.r||""}" value="${s.r}" oninput="setS(${i},${k},'r',this.value)"></div>`});
-  if(L)h+=`<div class="hint">Last: ${L.sets.map(s=>fmt(s,e,L.v)).join(", ")}</div>`;h+=`</div>`});
- $("main").innerHTML=h;save()}
+  if(L)h+=`<div class="hint">Last (${nice(L.date)}): ${L.sets.map(s=>fmt(s,e,L.v)).join(", ")}</div>`;h+=`</div>`});
+ $("main").innerHTML=h;hist()}
+function hist(){const l=S().sort((a,b)=>a.date<b.date?1:-1);$("hist").innerHTML=l.length?l.map(s=>{const p=PROG.find(x=>x.id===s.w);const n=p?Object.values(s.ex).reduce((a,e)=>a+e.sets.filter(x=>x.d).length,0):0;
+ return`<div class="row" style="margin-top:8px;min-height:44px" onclick="openS('${s.w}','${s.date}')"><span>${nice(s.date)}</span><span>${p?"Workout "+s.w+" · "+n+" sets":"🥊 Boxing"}</span></div>`}).join(""):'<div class="hint">No sessions yet</div>'}
+function openS(w,d){cur=w;date=d;wk=monday(d);render();scrollTo(0,0)}
+function ensure(i){const s=sess(),e=PROG.find(x=>x.id===cur).ex[i];return s.ex[i]||(s.ex[i]={v:lastV(e,i),sets:Array.from({length:e.s},()=>({d:false,w:"",r:""}))})}
 function fmt(s,e,v){if(e.u==="seconds")return(s.r||"–")+"s";const wt=s.w===""?(isPush(v)?"BW":"–"):s.w;return wt+"×"+(s.r||"–")}
-function setV(i,v){W().days[cur][i].v=v;save();render()}
-function setS(i,k,f,v){W().days[cur][i].sets[k][f]=v;save();if(f==="d")render()}
-function bump(){const w=W();w.box=(+w.box||0)+1;save();render();toast("Boxing: "+w.box)}
-$("wk").onchange=e=>{if(e.target.value){wk=monday(e.target.value+"T12:00");render()}};
-["box","rec","notes"].forEach(id=>$(id).oninput=e=>{W()[id]=e.target.value;save()});
-function report(){const w=W();let t=`WEEKLY LOG — Week of ${wk}\nBoxing sessions: ${w.box||0}\nRecovery rating: ${w.rec||"-"}/10\n`;
- PROG.forEach(p=>{t+=`\n${p.day} — ${p.focus}\n`;p.ex.forEach((e,i)=>{const en=(w.days[p.day]||{})[i];
+function setV(i,v){ensure(i).v=v;save();render()}
+function setS(i,k,f,v){ensure(i).sets[k][f]=v;save();if(f==="d")render();else hist()}
+function logBox(){DB.sessions["Box_"+date]={w:"Box",date,ex:{}};save();render();toast("Boxing logged "+nice(date))}
+function delS(id){if(confirm("Remove?")){delete DB.sessions[id];save();render()}}
+$("sd").onchange=e=>{if(e.target.value){date=e.target.value;wk=monday(date);render()}};
+$("wk").onchange=e=>{if(e.target.value){wk=e.target.value;render()}};
+["rec","notes"].forEach(id=>$(id).oninput=e=>{W()[id]=e.target.value;save()});
+function report(){const w=W(),end=addD(wk,6),ss=S().filter(s=>s.date>=wk&&s.date<=end).sort((a,b)=>a.date<b.date?-1:1);const bx=ss.filter(s=>s.w==="Box");
+ let t=`WEEKLY LOG — ${nice(wk)} to ${nice(end)}\nBoxing sessions: ${bx.length}${bx.length?" ("+bx.map(s=>nice(s.date)).join(", ")+")":""}\nRecovery rating: ${w.rec||"-"}/10\n`;
+ ss.filter(s=>s.w!=="Box").forEach(s=>{const p=PROG.find(x=>x.id===s.w);t+=`\n${nice(s.date)} — Workout ${s.w}: ${p.focus}\n`;p.ex.forEach((e,i)=>{const en=s.ex[i];
   const v=en&&en.v?` [${en.v}${en.v==="Dumbbells"?", lbs per hand":en.v==="Machine"?", as displayed":""}]`:(/Dumbbell/.test(e.n)?" [lbs per hand]":"");
-  const ss=en?en.sets.map((s,k)=>`S${k+1} ${fmt(s,e,en.v)}${s.d?" ✓":""}`).join(" | "):"not logged";t+=`- ${e.n}${v} (${e.s}×${e.t}): ${ss}\n`})});
+  t+=`- ${e.n}${v} (${e.s}×${e.t}): ${en?en.sets.map((x,k)=>`S${k+1} ${fmt(x,e,en.v)}${x.d?" ✓":""}`).join(" | "):"not logged"}\n`})});
  return t+`\nNotes: ${w.notes||"-"}\n`}
 function toast(m){$("toast").textContent=m;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",1800)}
 async function copyRep(){const t=report();try{await navigator.clipboard.writeText(t);toast("Report copied")}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();toast("Report copied")}}
-function exp(){const b=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="gym-log-"+wk+".json";a.click()}
-$("imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d.weeks)throw 0;if(!confirm("Merge backup into this phone's log?"))return;merge(d);render();toast("Imported")}catch(x){alert("Not a Gym Log backup")}};
-function merge(d){if(!d||!d.weeks)throw 0;for(const w in d.weeks){const t=DB.weeks[w]||(DB.weeks[w]={box:"",rec:"",notes:"",days:{}});const s=d.weeks[w];
- if(s.box!==""&&s.box!=null)t.box=s.box;if(s.rec!==""&&s.rec!=null)t.rec=s.rec;if(s.notes)t.notes=t.notes&&!t.notes.includes(s.notes)?t.notes+"\n"+s.notes:s.notes;
- for(const dy in s.days||{}){t.days[dy]=t.days[dy]||{};Object.assign(t.days[dy],s.days[dy])}}save()}
+function exp(){const b=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="gym-log-"+today+".json";a.click()}
+function merge(d){if(d&&!d.sessions&&d.weeks)d=fromV1(d);if(!d||!d.sessions)throw 0;
+ for(const id in d.sessions)DB.sessions[id]=d.sessions[id];
+ for(const w in d.weeks||{}){const t=DB.weeks[w]||(DB.weeks[w]={rec:"",notes:""}),s=d.weeks[w];if(s.rec)t.rec=s.rec;if(s.notes&&!(t.notes||"").includes(s.notes))t.notes=t.notes?t.notes+"\n"+s.notes:s.notes}save()}
+$("imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!confirm("Merge backup into this phone's log?"))return;merge(d);cur=nextW();render();toast("Imported")}catch(x){alert("Not a Gym Log backup")}};
 async function linkImport(){const q=new URLSearchParams(location.search).get("import");if(!q)return;history.replaceState(null,"",location.pathname);
  if(!/^[\w.-]+\.json$/.test(q)){alert("Bad import link");return}
- try{const d=await (await fetch("import/"+q,{cache:"no-store"})).json();if(!confirm("Load workout data from "+q+" into this phone's log?"))return;merge(d);render();toast("Imported "+q)}catch(e){alert("Import failed")}}
+ try{const d=await (await fetch("import/"+q,{cache:"no-store"})).json();if(!confirm("Load workout data from "+q+" into this phone's log?"))return;merge(d);cur=nextW();render();toast("Imported "+q)}catch(e){alert("Import failed")}}
 render();linkImport();
 </script></body></html>
